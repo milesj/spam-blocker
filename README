@@ -1,0 +1,14 @@
+Commentia (Spam Blocker) - CakePHP Behavior
+*******************************************
+
+Requirements
+============
+
+	* CakePHP 1.2
+	* PHP 5.2.x
+	* "comments" Database Table
+
+Documentation
+=============
+
+	* http://www.milesj.me/resources/script/commentia-behavior
