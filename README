@@ -8,6 +8,16 @@ Requirements
 	* PHP 5.2.x
 	* "comments" Database Table
 
+Features
+========
+
+    * Easy installation and configuration
+    * Just add it to your Comment models $actsAs
+    * Automatically runs after a comment is made
+    * Gives each comment a point ranking and then moderates
+    * Sends an email notification after every comment
+    * Always updated to ensure the best anti-spam capabilities!
+
 Documentation
 =============
 
