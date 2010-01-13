@@ -1,6 +1,6 @@
 <?php
 /** 
- * commentia.php
+ * Commentia Behavior - Comment Spam Blocker
  *
  * A CakePHP Behavior that moderates / validates comments to check for spam.
  * Validates based on a point system. High points is an automatic approval, where as low points is marked as spam or deleted.
@@ -9,8 +9,6 @@
  * @author 		Miles Johnson - www.milesj.me
  * @copyright	Copyright 2006-2009, Miles Johnson, Inc.
  * @license 	http://www.opensource.org/licenses/mit-license.php - Licensed under The MIT License
- * @package		Commentia Behavior - Comment Spam Blocker
- * @version 	1.5
  * @link		www.milesj.me/resources/script/commentia-behavior
  * @link		www.snook.ca/archives/other/effective_blog_comment_spam_blocker/
  */
@@ -18,14 +16,16 @@
 class CommentiaBehavior extends ModelBehavior {
 
 	/**
-	 * Current version: www.milesj.me/files/logs/commentia-behavior
+	 * Current version: www.milesj.me/resources/logs/commentia-behavior
+	 *
 	 * @access public
 	 * @var string
 	 */ 
 	public $version = '1.5';
 	
 	/**
-	 * Settings initiliazed with the behavior
+	 * Settings initiliazed with the behavior.
+	 *
 	 * @access public
 	 * @var array 
 	 */  
@@ -46,21 +46,24 @@ class CommentiaBehavior extends ModelBehavior {
 	);
 	
 	/**
-	 * Disallowed words within the comment body
+	 * Disallowed words within the comment body.
+	 *
 	 * @access public
 	 * @var array
 	 */
 	public $blacklistKeywords = array('levitra', 'viagra', 'casino', 'sex', 'loan', 'finance', 'slots', 'debt', 'free');
 	
 	/**
-	 * Disallowed words/chars within the url links
+	 * Disallowed words/chars within the url links.
+	 *
 	 * @access public
 	 * @var array
 	 */
 	public $blacklistWords = array('.html', '.info', '?', '&', '.de', '.pl', '.cn');
 	
 	/**
-	 * Startup hook from the model
+	 * Startup hook from the model.
+	 *
 	 * @access public
 	 * @param object $Model
 	 * @param array $settings
@@ -81,7 +84,8 @@ class CommentiaBehavior extends ModelBehavior {
 	}
 
 	/**
-	 * Runs before a save and marks the content as spam or regular comment
+	 * Runs before a save and marks the content as spam or regular comment.
+	 *
 	 * @access public
 	 * @param object $Model
 	 * @param boolean $created
@@ -242,7 +246,8 @@ class CommentiaBehavior extends ModelBehavior {
 	}
 	
 	/**
-	 * Sends out an email notifying you of a new comment
+	 * Sends out an email notifying you of a new comment.
+	 * 
 	 * @access private
 	 * @uses EmailComponent, Model
 	 * @param array $data
