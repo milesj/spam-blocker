@@ -1,12 +1,12 @@
-Commentia (Spam Blocker) v1.5 - CakePHP Behavior
-************************************************
+Spam Blocker v1.6 - CakePHP Behavior
+************************************
 
 Requirements
 ============
 
-	* CakePHP 1.2
-	* PHP 5.2.x
-	* "comments" Database Table
+    * CakePHP 1.2.x, 1.3.x
+    * PHP 5.2.x, 5.3.x
+    * "comments" Database Table
 
 Features
 ========
@@ -21,4 +21,4 @@ Features
 Documentation
 =============
 
-	* http://www.milesj.me/resources/script/commentia-behavior
+    * http://milesj.me/resources/script/spam-blocker-behavior
