@@ -32,19 +32,19 @@ CREATE TABLE `tests`.`comments` (
 class SpamBlockerBehavior extends ModelBehavior {
 
     /**
-    * Current version: http://milesj.me/resources/logs/spam-blocker-behavior
-    *
-    * @access public
-    * @var string
-    */
+     * Current version: http://milesj.me/resources/logs/spam-blocker-behavior
+     *
+     * @access public
+     * @var string
+     */
     public $version = '1.6';
 
     /**
-    * Settings initiliazed with the behavior.
-    *
-    * @access public
-    * @var array
-    */
+     * Settings initiliazed with the behavior.
+     *
+     * @access public
+     * @var array
+     */
     public $settings = array(
         'column_author'     => 'name',      // Column name for the authors name
         'column_content'    => 'content',   // Column name for the comments body
@@ -64,29 +64,29 @@ class SpamBlockerBehavior extends ModelBehavior {
     );
 
     /**
-    * Disallowed words within the comment body.
-    *
-    * @access public
-    * @var array
-    */
+     * Disallowed words within the comment body.
+     *
+     * @access public
+     * @var array
+     */
     public $blacklistKeywords = array('levitra', 'viagra', 'casino', 'sex', 'loan', 'finance', 'slots', 'debt', 'free');
 
     /**
-    * Disallowed words/chars within the url links.
-    *
-    * @access public
-    * @var array
-    */
+     * Disallowed words/chars within the url links.
+     *
+     * @access public
+     * @var array
+     */
     public $blacklistCharacters = array('.html', '.info', '?', '&', '.de', '.pl', '.cn');
 
     /**
-    * Startup hook from the model.
-    *
-    * @access public
-    * @param object $Model
-    * @param array $settings
-    * @return void
-    */
+     * Startup hook from the model.
+     *
+     * @access public
+     * @param object $Model
+     * @param array $settings
+     * @return void
+     */
     public function setup(&$Model, $settings = array()) {
         if (!empty($settings) && is_array($settings)) {
             $this->settings = $settings + $this->settings;
@@ -102,13 +102,13 @@ class SpamBlockerBehavior extends ModelBehavior {
     }
 
     /**
-    * Runs before a save and marks the content as spam or regular comment.
-    *
-    * @access public
-    * @param object $Model
-    * @param boolean $created
-    * @return mixed
-    */
+     * Runs before a save and marks the content as spam or regular comment.
+     *
+     * @access public
+     * @param object $Model
+     * @param boolean $created
+     * @return mixed
+     */
     public function afterSave(&$Model, $created) {
         if ($created) {
             $data = $Model->data[$Model->name];
@@ -262,17 +262,22 @@ class SpamBlockerBehavior extends ModelBehavior {
     }
 
     /**
-    * Sends out an email notifying you of a new comment.
-    *
-    * @access private
-    * @uses Model
-    * @param array $data
-    * @param array $stats
-    * @return void
-    */
+     * Sends out an email notifying you of a new comment.
+     *
+     * @access private
+     * @uses Model
+     * @param array $data
+     * @param array $stats
+     * @return void
+     */
     private function __notify($data, $stats) {
         if (!empty($this->settings['parent_model']) && !empty($this->settings['article_link']) && !empty($this->settings['notify_email'])) {
             $Entry = $this->settings['parent_model'];
+
+            if (strpos($Entry, '.') !== false) {
+                $parts = explode('.', $Entry);
+                $Entry = $parts[1];
+            }
 
             // Get parent entry/blog
             $fields = array('id', 'title');
@@ -280,7 +285,7 @@ class SpamBlockerBehavior extends ModelBehavior {
                 $fields[] = $this->settings['column_slug'];
             }
 
-            $entry = ClassRegistry::init($Entry)->find('first', array(
+            $entry = ClassRegistry::init($this->settings['parent_model'])->find('first', array(
                 'fields' => $fields,
                 'conditions' => array('id' => $data[$this->settings['column_foreign_id']]),
                 'recursive' => -1,
@@ -288,10 +293,10 @@ class SpamBlockerBehavior extends ModelBehavior {
             ));
 
             if ($this->settings['use_slug']) {
-                $entryLink 	= str_replace(':slug', $entry[$Entry][$this->settings['column_slug']], $this->settings['article_link']);
+                $entryLink = str_replace(':slug', $entry[$Entry][$this->settings['column_slug']], $this->settings['article_link']);
             }
 
-            $entryLink 	= str_replace(':id', $entry[$Entry]['id'], $this->settings['article_link']);
+            $entryLink = str_replace(':id', $entry[$Entry]['id'], $this->settings['article_link']);
             $entryTitle = $entry[$Entry]['title'];
 
             // Build message
