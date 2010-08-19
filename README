@@ -14,7 +14,7 @@ Features
     * Easy installation and configuration
     * Just add it to your Comment models $actsAs
     * Automatically runs after a comment is made
-    * Gives each comment a point ranking and then moderates
+    * Gives each comment a point ranking and then moderates (approves, deletes, marks as spam)
     * Sends an email notification after every comment
     * Always updated to ensure the best anti-spam capabilities!
 

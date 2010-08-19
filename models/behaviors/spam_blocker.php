@@ -94,7 +94,11 @@ class SpamBlockerBehavior extends ModelBehavior {
      * @access public
      * @var array
      */
-    public $blacklistKeywords = array('levitra', 'viagra', 'casino', 'sex', 'loan', 'finance', 'slots', 'debt', 'free');
+    public $blacklistKeywords = array(
+        'levitra', 'viagra', 'casino', 'sex', 'loan', 'finance', 'slots', 'debt', 'free', 'stock', 'debt',
+        'marketing', 'rates', 'ad', 'bankruptcy', 'homeowner', 'discreet', 'preapproved', 'unclaimed',
+        'email', 'click', 'unsubscribe', 'buy', 'sell', 'sales', 'earn'
+    );
 
     /**
      * Disallowed words/chars within the url links.
@@ -102,7 +106,7 @@ class SpamBlockerBehavior extends ModelBehavior {
      * @access public
      * @var array
      */
-    public $blacklistCharacters = array('.html', '.info', '?', '&', '.de', '.pl', '.cn');
+    public $blacklistCharacters = array('.html', '.info', '?', '&', '.de', '.pl', '.cn', '.ru', '.biz');
 
     /**
      * Startup hook from the model.
