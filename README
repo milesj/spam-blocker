@@ -1,6 +1,9 @@
 Spam Blocker v1.6 - CakePHP Behavior
 ************************************
 
+Version 1.6 is not backwards compatible with previous versions.
+Check the commit log for changes and please update your code accordingly!
+
 Requirements
 ============
 
