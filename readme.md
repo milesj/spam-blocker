@@ -2,7 +2,7 @@
 
 A CakePHP Behavior that moderates and validates comments to check for spam.
 
-----------
+### Not Backwards Compatible ###
 
 Version 1.6 is not backwards compatible with previous versions.
 Check the commit log for changes and please update your code accordingly!
