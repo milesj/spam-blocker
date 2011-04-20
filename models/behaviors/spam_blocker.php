@@ -6,18 +6,18 @@
  * Validates based on a point system. High points is an automatic approval, where as low points is marked as spam or deleted.
  * Based on Jonathon Snooks outline.
  *
- * @author      Miles Johnson - www.milesj.me
- * @copyright   Copyright 2006-2010, Miles Johnson, Inc.
+ * @author      Miles Johnson - http://milesj.me
+ * @copyright   Copyright 2006-2011, Miles Johnson, Inc.
  * @license     http://www.opensource.org/licenses/mit-license.php - Licensed under The MIT License
  * @link        http://milesj.me/resources/script/spam-blocker-behavior
  * @link        http://snook.ca/archives/other/effective_blog_comment_spam_blocker/
  */
 
 /**
-CREATE TABLE `tests`.`comments` (
+CREATE TABLE `comments` (
     `id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     `entry_id` INT NOT NULL,
-    `status` ENUM('approved','pending','delete','spam') NOT NULL DEFAULT 'pending',
+    `status` SMALLINT NOT NULL DEFAULT 0,
     `points` INT NOT NULL,
     `name` VARCHAR(50) NOT NULL,
     `email` VARCHAR(50) NOT NULL,
@@ -37,7 +37,7 @@ class SpamBlockerBehavior extends ModelBehavior {
      * @access public
      * @var string
      */
-    public $version = '1.6';
+    public $version = '1.7';
 
     /**
      * Settings initiliazed with the behavior.
@@ -82,10 +82,10 @@ class SpamBlockerBehavior extends ModelBehavior {
      * @var array
      */
     public $statusCodes = array(
-        'pending'   => 'pending',
-        'approved'  => 'approved',
-        'delete'    => 'denied',
-        'spam'      => 'spam'
+        'pending'   => 0,
+        'approved'  => 1,
+        'delete'    => 2,
+        'spam'      => 3
     );
 
     /**
@@ -116,7 +116,7 @@ class SpamBlockerBehavior extends ModelBehavior {
      * @param array $settings
      * @return void
      */
-    public function setup(&$Model, $settings = array()) {
+    public function setup($Model, $settings = array()) {
         if (!empty($settings) && is_array($settings)) {
             if (!empty($settings['settings'])) {
                 $this->settings = $settings['settings'] + $this->settings;
@@ -148,204 +148,209 @@ class SpamBlockerBehavior extends ModelBehavior {
      * @param boolean $created
      * @return mixed
      */
-    public function afterSave(&$Model, $created) {
-        if ($created) {
-            $data = $Model->data[$Model->name];
-            $points =  0;
+    public function afterSave($Model, $created) {
+        if (!$created) {
+			return;
+		}
 
-            if (!empty($data)) {
-                // Get links in the content
-                $links = preg_match_all("#(^|[\n ])(?:(?:http|ftp|irc)s?:\/\/|www.)(?:[-A-Za-z0-9]+\.)+[A-Za-z]{2,4}(?:[-a-zA-Z0-9._\/&=+%?;\#]+)#is", $data[$this->columns['content']], $matches);
-                $links = $matches[0];
+		$data = $Model->data[$Model->name];
+		$points =  0;
 
-                $totalLinks = count($links);
-                $length = mb_strlen($data[$this->columns['content']]);
+		if (!empty($data)) {
+			// Check referrer
+			$referer = env('HTTP_REFERER');
+			if (!empty($referer) && strpos($referer, trim(env('HTTP_HOST'), '/')) === false) {
+				$points = $points - 20;
+			}
 
-                // How many links are in the body
-                // +2 if less than 2, -1 per link if over 2
-                if ($totalLinks > 2) {
-                    $points = $points - $totalLinks;
-                } else {
-                    $points = $points + 2;
-                }
+			// Get links in the content
+			$links = preg_match_all("#(^|[\n ])(?:(?:http|ftp|irc)s?:\/\/|www.)(?:[-A-Za-z0-9]+\.)+[A-Za-z]{2,4}(?:[-a-zA-Z0-9._\/&=+%?;\#]+)#is", $data[$this->columns['content']], $matches);
+			$links = $matches[0];
 
-                // How long is the body
-                // +2 if more then 20 chars and no links, -1 if less then 20
-                if ($length >= 20 && $totalLinks <= 0) {
-                    $points = $points + 2;
-                } else if ($length >= 20 && $totalLinks == 1) {
-                    ++$points;
-                } else if ($length < 20) {
-                    --$points;
-                }
+			$totalLinks = count($links);
+			$length = mb_strlen($data[$this->columns['content']]);
 
-                // Number of previous comments from email
-                // +1 per approved, -1 per spam
-                $comments = $Model->find('all', array(
-                    'fields' => array('id', $this->columns['status']),
-                    'conditions' => array($this->columns['email'] => $data[$this->columns['email']]),
-                    'recursive' => -1,
-                    'contain' => false
-                ));
+			// How many links are in the body
+			// +2 if less than 2, -1 per link if over 2
+			if ($totalLinks > 2) {
+				$points = $points - $totalLinks;
+			} else {
+				$points = $points + 2;
+			}
 
-                if (!empty($comments)) {
-                    foreach ($comments as $comment) {
-                        if ($comment[$Model->alias][$this->columns['status']] == $this->statusCodes['spam']) {
-                            --$points;
-                        }
+			// How long is the body
+			// +2 if more then 20 chars and no links, -1 if less then 20
+			if ($length >= 20 && $totalLinks <= 0) {
+				$points = $points + 2;
+			} else if ($length >= 20 && $totalLinks == 1) {
+				++$points;
+			} else if ($length < 20) {
+				--$points;
+			}
 
-                        if ($comment[$Model->alias][$this->columns['status']] == $this->statusCodes['approved']) {
-                            ++$points;
-                        }
-                    }
-                }
+			// Number of previous comments from email
+			// +1 per approved, -1 per spam
+			$comments = $Model->find('all', array(
+				'fields' => array('id', $this->columns['status']),
+				'conditions' => array($this->columns['email'] => $data[$this->columns['email']]),
+				'recursive' => -1,
+				'contain' => false
+			));
 
-                // Keyword search
-                // -1 per blacklisted keyword
-                foreach ($this->blacklistKeywords as $keyword) {
-                    if (stripos($data[$this->columns['content']], $keyword) !== false) {
-                        --$points;
-                    }
-                }
+			if (!empty($comments)) {
+				foreach ($comments as $comment) {
+					if ($comment[$Model->alias][$this->columns['status']] == $this->statusCodes['spam']) {
+						--$points;
+					}
 
-                // URLs that have certain words or characters in them
-                // -1 per blacklisted word
-                // URL length
-                // -1 if more then 30 chars
-                foreach ($links as $link) {
-                    foreach ($this->blacklistCharacters as $word) {
-                        if (stripos($link, $word) !== false) {
-                            --$points;
-                        }
-                    }
+					if ($comment[$Model->alias][$this->columns['status']] == $this->statusCodes['approved']) {
+						++$points;
+					}
+				}
+			}
 
-                    foreach ($this->blacklistKeywords as $keyword) {
-                        if (stripos($link, $keyword) !== false) {
-                            --$points;
-                        }
-                    }
+			// Keyword search
+			// -1 per blacklisted keyword
+			foreach ($this->blacklistKeywords as $keyword) {
+				if (stripos($data[$this->columns['content']], $keyword) !== false) {
+					--$points;
+				}
+			}
 
-                    if (strlen($link) >= 30) {
-                        --$points;
-                    }
-                }
+			// URLs that have certain words or characters in them
+			// -1 per blacklisted word
+			// URL length
+			// -1 if more then 30 chars
+			foreach ($links as $link) {
+				foreach ($this->blacklistCharacters as $word) {
+					if (stripos($link, $word) !== false) {
+						--$points;
+					}
+				}
 
-                // Body starts with...
-                // -10 points
-                $firstWord = mb_substr($data[$this->columns['content']], 0, stripos($data[$this->columns['content']], ' '));
-                $firstDisallow = array('interesting', 'cool', 'sorry') + $this->blacklistKeywords;
+				foreach ($this->blacklistKeywords as $keyword) {
+					if (stripos($link, $keyword) !== false) {
+						--$points;
+					}
+				}
 
-                if (in_array(mb_strtolower($firstWord), $firstDisallow)) {
-                    $points = $points - 10;
-                }
+				if (strlen($link) >= 30) {
+					--$points;
+				}
+			}
 
-                // Author name has http:// in it
-                // -2 points
-                if (stripos($data[$this->columns['author']], 'http://') !== false) {
-                    $points = $points - 2;
-                }
+			// Body starts with...
+			// -10 points
+			$firstWord = mb_substr($data[$this->columns['content']], 0, stripos($data[$this->columns['content']], ' '));
+			$firstDisallow = array('interesting', 'cool', 'sorry') + $this->blacklistKeywords;
 
-                // Body used in previous comment
-                // -1 per exact comment
-                $previousComments = $Model->find('count', array(
-                    'conditions' => array($this->columns['content'] => $data[$this->columns['content']]),
-                    'recursive' => -1,
-                    'contain' => false
-                ));
+			if (in_array(mb_strtolower($firstWord), $firstDisallow)) {
+				$points = $points - 10;
+			}
 
-                if ($previousComments > 0) {
-                    $points = $points - $previousComments;
-                }
+			// Author name has http:// in it
+			// -2 points
+			if (stripos($data[$this->columns['author']], 'http://') !== false) {
+				$points = $points - 2;
+			}
 
-                // Random character match
-                // -1 point per 5 consecutive consonants
-                $consonants = preg_match_all('/[^aAeEiIoOuU\s]{5,}+/i', $data[$this->columns['content']], $matches);
-                $totalConsonants = count($matches[0]);
+			// Body used in previous comment
+			// -1 per exact comment
+			$previousComments = $Model->find('count', array(
+				'conditions' => array($this->columns['content'] => $data[$this->columns['content']]),
+				'recursive' => -1,
+				'contain' => false
+			));
 
-                if ($totalConsonants > 0) {
-                    $points = $points - $totalConsonants;
-                }
-            }
+			if ($previousComments > 0) {
+				$points = $points - $previousComments;
+			}
 
-            // Finalize and save
-            if ($points >= 1) {
-                $status = $this->statusCodes['approved'];
-            } else if ($points == 0) {
-                $status = $this->statusCodes['pending'];
-            } else if ($points <= $this->settings['deletion']) {
-                $status = $this->statusCodes['delete'];
-            } else {
-                $status = $this->statusCodes['spam'];
-            }
+			// Random character match
+			// -1 point per 5 consecutive consonants
+			$consonants = preg_match_all('/[^aAeEiIoOuU\s]{5,}+/i', $data[$this->columns['content']], $matches);
+			$totalConsonants = count($matches[0]);
 
-            if ($status == $this->statusCodes['delete']) {
-                $Model->delete($Model->id, false);
-            } else {
-                $update = array($this->columns['status'] => $status);
+			if ($totalConsonants > 0) {
+				$points = $points - $totalConsonants;
+			}
+		}
 
-                if ($this->settings['save_points']) {
-                    $update[$this->columns['points']] = $points;
-                }
+		// Finalize and save
+		if ($points >= 1) {
+			$status = $this->statusCodes['approved'];
+		} else if ($points == 0) {
+			$status = $this->statusCodes['pending'];
+		} else if ($points <= $this->settings['deletion']) {
+			$status = $this->statusCodes['delete'];
+		} else {
+			$status = $this->statusCodes['spam'];
+		}
 
-                $Model->save($update, false, array_keys($update));
+		if ($status == $this->statusCodes['delete']) {
+			$Model->delete($Model->id, false);
+		} else {
+			$update = array($this->columns['status'] => $status);
 
-                if ($this->settings['send_email']) {
-                    $update[$this->columns['points']] = $points;
+			if ($this->settings['save_points']) {
+				$update[$this->columns['points']] = $points;
+			}
 
-                    $this->__notify($data, $update);
-                }
-            }
+			$Model->save($update, false, array_keys($update));
 
-            return $points;
-        }
+			if ($this->settings['send_email']) {
+				$update[$this->columns['points']] = $points;
+
+				$this->notify($data, $update);
+			}
+		}
+
+		return $points;
     }
 
     /**
      * Sends out an email notifying you of a new comment.
      *
-     * @access private
+     * @access public
      * @uses Model
      * @param array $data
      * @param array $stats
      * @return void
      */
-    private function __notify($data, $stats) {
+    public function notify($data, $stats) {
         if (!empty($this->settings['parent_model']) && !empty($this->settings['article_link']) && !empty($this->settings['notify_email'])) {
-            $Entry = $this->settings['parent_model'];
-
-            if (strpos($Entry, '.') !== false) {
-                $parts = explode('.', $Entry);
-                $Entry = $parts[1];
-            }
-
-            // Get parent entry/blog
             $fields = array('id', $this->columns['title']);
+
             if ($this->settings['use_slug']) {
                 $fields[] = $this->columns['slug'];
             }
 
-            $entry = ClassRegistry::init($this->settings['parent_model'])->find('first', array(
+			$Model = ClassRegistry::init($this->settings['parent_model']);
+            $entry = $Model->find('first', array(
                 'fields' => $fields,
                 'conditions' => array('id' => $data[$this->columns['foreign_id']]),
                 'recursive' => -1,
                 'contain' => false
             ));
 
+            $link = str_replace(':id', $entry[$Model->alias]['id'], $this->settings['article_link']);
+            $title = $entry[$Model->alias][$this->columns['title']];
+			$statusCodes = array_flip($this->statusCodes);
+
             if ($this->settings['use_slug']) {
-                $entryLink = str_replace(':slug', $entry[$Entry][$this->columns['slug']], $this->settings['article_link']);
+                $link = str_replace(':slug', $entry[$Model->alias][$this->columns['slug']], $this->settings['article_link']);
             }
 
-            $entryLink = str_replace(':id', $entry[$Entry]['id'], $this->settings['article_link']);
-            $entryTitle = $entry[$Entry][$this->columns['title']];
-
             // Build message
-            $message  = "A new comment has been posted for: ". $entryLink ."\n\n";
+            $message  = "A new comment has been posted for: ". $link ."\n\n";
             $message .= "Name: ". $data[$this->columns['author']] ." <". $data[$this->columns['email']] .">\n";
-            $message .= "Status: ". ucfirst($stats['status']) ." (". $stats['points'] ." Points)\n";
+            $message .= "Status: ". $statusCodes[$stats['status']] ." (". $stats['points'] ." Points)\n";
             $message .= "Message:\n\n". $data[$this->columns['content']];
 
+			debug($message);
+
             // Send email
-            mail($this->settings['notify_email'], 'Comment Approval: '. $entryTitle, $message, 'From: '. $data[$this->columns['author']] .' <'. $data[$this->columns['email']] .'>');
+            mail($this->settings['notify_email'], 'Comment Approval: '. $title, $message, 'From: '. $data[$this->columns['author']] .' <'. $data[$this->columns['email']] .'>');
         }
     }
 

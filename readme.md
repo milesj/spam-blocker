@@ -1,4 +1,4 @@
-# Spam Blocker v1.6 #
+# Spam Blocker v1.7 #
 
 A CakePHP Behavior that moderates and validates comments to check for spam.
 
@@ -11,7 +11,7 @@ Check the commit log for changes and please update your code accordingly!
 
 * CakePHP 1.2.x, 1.3.x
 * PHP 5.2.x, 5.3.x
-* "comments" Database Table
+* "comments" database table
 
 ## Features ##
 
