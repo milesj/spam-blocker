@@ -9,7 +9,7 @@
  * @author      Miles Johnson - http://milesj.me
  * @copyright   Copyright 2006-2011, Miles Johnson, Inc.
  * @license     http://www.opensource.org/licenses/mit-license.php - Licensed under The MIT License
- * @link        http://milesj.me/resources/script/spam-blocker-behavior
+ * @link        http://milesj.me/code/cakephp/spam-blocker
  * @link        http://snook.ca/archives/other/effective_blog_comment_spam_blocker/
  */
 
@@ -32,12 +32,12 @@ CREATE TABLE `comments` (
 class SpamBlockerBehavior extends ModelBehavior {
 
     /**
-     * Current version: http://milesj.me/resources/logs/spam-blocker-behavior
+     * Current version.
      *
      * @access public
      * @var string
      */
-    public $version = '1.7';
+    public $version = '1.8';
 
     /**
      * Settings initiliazed with the behavior.
@@ -46,15 +46,35 @@ class SpamBlockerBehavior extends ModelBehavior {
      * @var array
      */
     public $settings = array(
-        'parent_model'      => 'Entry',     // Model name of the parent article/entry/etc
-        'article_link'      => '',          // Link to the parent article, use :id for the permalink id
-        'use_slug'          => false,       // To use a slug in the article link, use :slug
-        'notify_email'      => '',          // Email address where the notify emails should go
-        'save_points'       => true,        // Should the points be saved to the database?
-        'send_email'        => true,        // Should you receive a notification email for each comment?
-        'blacklist_keys'    => '',          // List of blacklisted words within text blocks
-        'blacklist_chars'   => '',          // List of blacklisted characters within URLs
-        'deletion'          => -10          // How many points till the comment is deleted (negative)
+		// Model name of the parent article
+        'parent_model' => 'Entry',
+
+		// Link to the parent article (:id will be replaced with article ID)
+        'article_link' => '',
+
+		// To use a slug in the article link, use :slug
+        'use_slug' => false,
+
+		// Email address where the notify emails should go
+        'notify_email' => '',
+
+		// Should the points be saved to the database?
+        'save_points' => true,
+
+		// Should you receive a notification email for each comment?
+        'send_email' => true,
+
+		// List of blacklisted words within text blocks
+        'blacklist_keys' => '',
+
+		// List of blacklisted characters within URLs
+        'blacklist_chars' => '',
+
+		// How many points till the comment is deleted (negative)
+        'deletion' => -10,
+
+		// Error message received when comment falls below threshold
+		'blocked_msg' => 'Your comment has been denied.'
     );
 
     /**
@@ -64,15 +84,15 @@ class SpamBlockerBehavior extends ModelBehavior {
      * @var array
      */
     public $columns = array(
-        'author'        => 'name',      // Column for the authors name
-        'content'       => 'content',   // Column for the comments body
-        'email'         => 'email',     // Column for the authors email
-        'website'       => 'website',   // Column for the authors website
-        'foreign_id'    => 'entry_id',  // Column of the foreign id that links to the article/entry/etc
-        'slug'          => 'slug',      // Column for the slug in the entries table
-        'title'         => 'title',     // Column for article title in the entries table
-        'status'        => 'status',    // Column for approval status
-        'points'        => 'points'     // Column for point score
+        'author'        => 'name',
+        'content'       => 'content',
+        'email'         => 'email',
+        'website'       => 'website',
+        'foreign_id'    => 'entry_id',
+        'slug'          => 'slug',
+        'title'         => 'title',
+        'status'        => 'status',
+        'points'        => 'points'
     );
 
     /**
@@ -145,18 +165,14 @@ class SpamBlockerBehavior extends ModelBehavior {
      *
      * @access public
      * @param object $Model
-     * @param boolean $created
      * @return mixed
      */
-    public function afterSave($Model, $created) {
-        if (!$created) {
-			return;
-		}
-
+    public function beforeSave($Model) {
 		$data = $Model->data[$Model->name];
 		$points =  0;
 
 		if (!empty($data)) {
+
 			// Check referrer
 			$referer = env('HTTP_REFERER');
 			if (!empty($referer) && strpos($referer, trim(env('HTTP_HOST'), '/')) === false) {
@@ -288,24 +304,25 @@ class SpamBlockerBehavior extends ModelBehavior {
 		}
 
 		if ($status == $this->statusCodes['delete']) {
-			$Model->delete($Model->id, false);
+			$Model->validationErrors[$this->columns['content']] = $this->settings['blocked_msg'];
+			return false;
+
 		} else {
-			$update = array($this->columns['status'] => $status);
+			$Model->data[$Model->name][$this->columns['status']] = $status;
 
 			if ($this->settings['save_points']) {
-				$update[$this->columns['points']] = $points;
+				$Model->data[$Model->name][$this->columns['points']] = $points;
 			}
 
-			$Model->save($update, false, array_keys($update));
-
 			if ($this->settings['send_email']) {
-				$update[$this->columns['points']] = $points;
-
-				$this->notify($data, $update);
+				$this->notify($data, array(
+					$this->columns['status'] => $status,
+					$this->columns['points'] => $points
+				));
 			}
 		}
 
-		return $points;
+		return true;
     }
 
     /**
@@ -346,8 +363,6 @@ class SpamBlockerBehavior extends ModelBehavior {
             $message .= "Name: ". $data[$this->columns['author']] ." <". $data[$this->columns['email']] .">\n";
             $message .= "Status: ". $statusCodes[$stats['status']] ." (". $stats['points'] ." Points)\n";
             $message .= "Message:\n\n". $data[$this->columns['content']];
-
-			debug($message);
 
             // Send email
             mail($this->settings['notify_email'], 'Comment Approval: '. $title, $message, 'From: '. $data[$this->columns['author']] .' <'. $data[$this->columns['email']] .'>');
