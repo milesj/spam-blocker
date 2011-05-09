@@ -31,143 +31,143 @@ CREATE TABLE `comments` (
 
 class SpamBlockerBehavior extends ModelBehavior {
 
-    /**
-     * Current version.
-     *
-     * @access public
-     * @var string
-     */
-    public $version = '1.8';
+	/**
+	 * Current version.
+	 *
+	 * @access public
+	 * @var string
+	 */
+	public $version = '1.8';
 
-    /**
-     * Settings initiliazed with the behavior.
-     *
-     * @access public
-     * @var array
-     */
-    public $settings = array(
+	/**
+	 * Settings initiliazed with the behavior.
+	 *
+	 * @access public
+	 * @var array
+	 */
+	public $settings = array(
 		// Model name of the parent article
-        'parent_model' => 'Entry',
+		'parent_model' => 'Entry',
 
 		// Link to the parent article (:id will be replaced with article ID)
-        'article_link' => '',
+		'article_link' => '',
 
 		// To use a slug in the article link, use :slug
-        'use_slug' => false,
+		'use_slug' => false,
 
 		// Email address where the notify emails should go
-        'notify_email' => '',
+		'notify_email' => '',
 
 		// Should the points be saved to the database?
-        'save_points' => true,
+		'save_points' => true,
 
 		// Should you receive a notification email for each comment?
-        'send_email' => true,
+		'send_email' => true,
 
 		// List of blacklisted words within text blocks
-        'blacklist_keys' => '',
+		'blacklist_keys' => '',
 
 		// List of blacklisted characters within URLs
-        'blacklist_chars' => '',
+		'blacklist_chars' => '',
 
 		// How many points till the comment is deleted (negative)
-        'deletion' => -10,
+		'deletion' => -10,
 
 		// Error message received when comment falls below threshold
 		'blocked_msg' => 'Your comment has been denied.'
-    );
+	);
 
-    /**
-     * Names for table columns within the comments table and the parent.
-     *
-     * @access public
-     * @var array
-     */
-    public $columns = array(
-        'author'        => 'name',
-        'content'       => 'content',
-        'email'         => 'email',
-        'website'       => 'website',
-        'foreign_id'    => 'entry_id',
-        'slug'          => 'slug',
-        'title'         => 'title',
-        'status'        => 'status',
-        'points'        => 'points'
-    );
+	/**
+	 * Names for table columns within the comments table and the parent.
+	 *
+	 * @access public
+	 * @var array
+	 */
+	public $columns = array(
+		'author'        => 'name',
+		'content'       => 'content',
+		'email'         => 'email',
+		'website'       => 'website',
+		'foreign_id'    => 'entry_id',
+		'slug'          => 'slug',
+		'title'         => 'title',
+		'status'        => 'status',
+		'points'        => 'points'
+	);
 
-    /**
-     * Status codes for the enum (or integer) status column.
-     *
-     * @access public
-     * @var array
-     */
-    public $statusCodes = array(
-        'pending'   => 0,
-        'approved'  => 1,
-        'delete'    => 2,
-        'spam'      => 3
-    );
+	/**
+	 * Status codes for the enum (or integer) status column.
+	 *
+	 * @access public
+	 * @var array
+	 */
+	public $statusCodes = array(
+		'pending'   => 0,
+		'approved'  => 1,
+		'delete'    => 2,
+		'spam'      => 3
+	);
 
-    /**
-     * Disallowed words within the comment body.
-     *
-     * @access public
-     * @var array
-     */
-    public $blacklistKeywords = array(
-        'levitra', 'viagra', 'casino', 'sex', 'loan', 'finance', 'slots', 'debt', 'free', 'stock', 'debt',
-        'marketing', 'rates', 'ad', 'bankruptcy', 'homeowner', 'discreet', 'preapproved', 'unclaimed',
-        'email', 'click', 'unsubscribe', 'buy', 'sell', 'sales', 'earn'
-    );
+	/**
+	 * Disallowed words within the comment body.
+	 *
+	 * @access public
+	 * @var array
+	 */
+	public $blacklistKeywords = array(
+		'levitra', 'viagra', 'casino', 'sex', 'loan', 'finance', 'slots', 'debt', 'free', 'stock', 'debt',
+		'marketing', 'rates', 'ad', 'bankruptcy', 'homeowner', 'discreet', 'preapproved', 'unclaimed',
+		'email', 'click', 'unsubscribe', 'buy', 'sell', 'sales', 'earn'
+	);
 
-    /**
-     * Disallowed words/chars within the url links.
-     *
-     * @access public
-     * @var array
-     */
-    public $blacklistCharacters = array('.html', '.info', '?', '&', '.de', '.pl', '.cn', '.ru', '.biz');
+	/**
+	 * Disallowed words/chars within the url links.
+	 *
+	 * @access public
+	 * @var array
+	 */
+	public $blacklistCharacters = array('.html', '.info', '?', '&', '.de', '.pl', '.cn', '.ru', '.biz');
 
-    /**
-     * Startup hook from the model.
-     *
-     * @access public
-     * @param object $Model
-     * @param array $settings
-     * @return void
-     */
-    public function setup($Model, $settings = array()) {
-        if (!empty($settings) && is_array($settings)) {
-            if (!empty($settings['settings'])) {
-                $this->settings = $settings['settings'] + $this->settings;
-            }
+	/**
+	 * Startup hook from the model.
+	 *
+	 * @access public
+	 * @param object $Model
+	 * @param array $settings
+	 * @return void
+	 */
+	public function setup($Model, $settings = array()) {
+		if (!empty($settings) && is_array($settings)) {
+			if (!empty($settings['settings'])) {
+				$this->settings = $settings['settings'] + $this->settings;
+			}
 
-            if (!empty($settings['columns'])) {
-                $this->columns = $settings['columns'] + $this->columns;
-            }
+			if (!empty($settings['columns'])) {
+				$this->columns = $settings['columns'] + $this->columns;
+			}
 
-            if (!empty($settings['statusCodes'])) {
-                $this->statusCodes = $settings['statusCodes'] + $this->statusCodes;
-            }
-        }
+			if (!empty($settings['statusCodes'])) {
+				$this->statusCodes = $settings['statusCodes'] + $this->statusCodes;
+			}
+		}
 
-        if (!empty($this->settings['blacklist_keys']) && is_array($this->settings['blacklist_keys'])) {
-            $this->blacklistKeywords = $this->settings['blacklist_keys'] + $this->blacklistKeywords;
-        }
+		if (!empty($this->settings['blacklist_keys']) && is_array($this->settings['blacklist_keys'])) {
+			$this->blacklistKeywords = $this->settings['blacklist_keys'] + $this->blacklistKeywords;
+		}
 
-        if (!empty($this->settings['blacklist_chars']) && is_array($this->settings['blacklist_chars'])) {
-            $this->blacklistCharacters = $this->settings['blacklist_chars'] + $this->blacklistCharacters;
-        }
-    }
+		if (!empty($this->settings['blacklist_chars']) && is_array($this->settings['blacklist_chars'])) {
+			$this->blacklistCharacters = $this->settings['blacklist_chars'] + $this->blacklistCharacters;
+		}
+	}
 
-    /**
-     * Runs before a save and marks the content as spam or regular comment.
-     *
-     * @access public
-     * @param object $Model
-     * @return mixed
-     */
-    public function beforeSave($Model) {
+	/**
+	 * Runs before a save and marks the content as spam or regular comment.
+	 *
+	 * @access public
+	 * @param object $Model
+	 * @return mixed
+	 */
+	public function beforeSave($Model) {
 		$data = $Model->data[$Model->name];
 		$points =  0;
 
@@ -323,50 +323,50 @@ class SpamBlockerBehavior extends ModelBehavior {
 		}
 
 		return true;
-    }
+	}
 
-    /**
-     * Sends out an email notifying you of a new comment.
-     *
-     * @access public
-     * @uses Model
-     * @param array $data
-     * @param array $stats
-     * @return void
-     */
-    public function notify($data, $stats) {
-        if (!empty($this->settings['parent_model']) && !empty($this->settings['article_link']) && !empty($this->settings['notify_email'])) {
-            $fields = array('id', $this->columns['title']);
+	/**
+	 * Sends out an email notifying you of a new comment.
+	 *
+	 * @access public
+	 * @uses Model
+	 * @param array $data
+	 * @param array $stats
+	 * @return void
+	 */
+	public function notify($data, $stats) {
+		if (!empty($this->settings['parent_model']) && !empty($this->settings['article_link']) && !empty($this->settings['notify_email'])) {
+			$fields = array('id', $this->columns['title']);
 
-            if ($this->settings['use_slug']) {
-                $fields[] = $this->columns['slug'];
-            }
+			if ($this->settings['use_slug']) {
+				$fields[] = $this->columns['slug'];
+			}
 
 			$Model = ClassRegistry::init($this->settings['parent_model']);
-            $entry = $Model->find('first', array(
-                'fields' => $fields,
-                'conditions' => array('id' => $data[$this->columns['foreign_id']]),
-                'recursive' => -1,
-                'contain' => false
-            ));
+			$entry = $Model->find('first', array(
+				'fields' => $fields,
+				'conditions' => array('id' => $data[$this->columns['foreign_id']]),
+				'recursive' => -1,
+				'contain' => false
+			));
 
-            $link = str_replace(':id', $entry[$Model->alias]['id'], $this->settings['article_link']);
-            $title = $entry[$Model->alias][$this->columns['title']];
+			$link = str_replace(':id', $entry[$Model->alias]['id'], $this->settings['article_link']);
+			$title = $entry[$Model->alias][$this->columns['title']];
 			$statusCodes = array_flip($this->statusCodes);
 
-            if ($this->settings['use_slug']) {
-                $link = str_replace(':slug', $entry[$Model->alias][$this->columns['slug']], $this->settings['article_link']);
-            }
+			if ($this->settings['use_slug']) {
+				$link = str_replace(':slug', $entry[$Model->alias][$this->columns['slug']], $this->settings['article_link']);
+			}
 
-            // Build message
-            $message  = "A new comment has been posted for: ". $link ."\n\n";
-            $message .= "Name: ". $data[$this->columns['author']] ." <". $data[$this->columns['email']] .">\n";
-            $message .= "Status: ". $statusCodes[$stats['status']] ." (". $stats['points'] ." Points)\n";
-            $message .= "Message:\n\n". $data[$this->columns['content']];
+			// Build message
+			$message  = "A new comment has been posted for: ". $link ."\n\n";
+			$message .= "Name: ". $data[$this->columns['author']] ." <". $data[$this->columns['email']] .">\n";
+			$message .= "Status: ". $statusCodes[$stats['status']] ." (". $stats['points'] ." Points)\n";
+			$message .= "Message:\n\n". $data[$this->columns['content']];
 
-            // Send email
-            mail($this->settings['notify_email'], 'Comment Approval: '. $title, $message, 'From: '. $data[$this->columns['author']] .' <'. $data[$this->columns['email']] .'>');
-        }
-    }
+			// Send email
+			mail($this->settings['notify_email'], 'Comment Approval: '. $title, $message, 'From: '. $data[$this->columns['author']] .' <'. $data[$this->columns['email']] .'>');
+		}
+	}
 
 }
