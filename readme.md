@@ -1,11 +1,17 @@
-# Spam Blocker v1.8 # 
+# Spam Blocker v1.8 #
 
-A CakePHP Behavior that moderates and validates comments to check for spam.
+A CakePHP Behavior that moderates and validates comments to check for spam. Invalid comments will not be inserted into the database.
+
+This version is only compatible with CakePHP 1.3.
+
+## Compatibility ##
+
+* v1.x - CakePHP 1.3
+* v2.x - CakePHP 2.0
 
 ## Requirements ##
 
-* CakePHP 1.2.x, 1.3.x
-* PHP 5.2.x, 5.3.x
+* PHP 5.2, 5.3
 * "comments" database table
 
 ## Features ##
