@@ -1,6 +1,6 @@
 <?php
 /**
- * Spam Blocker Behavior
+ * SpamBlockerBehavior
  *
  * A CakePHP Behavior that moderates / validates comments to check for spam.
  * Validates based on a point system. High points is an automatic approval, where as low points is marked as spam or deleted.
@@ -37,7 +37,7 @@ class SpamBlockerBehavior extends ModelBehavior {
 	 * @access public
 	 * @var string
 	 */
-	public $version = '1.8';
+	public $version = '2.0';
 
 	/**
 	 * Settings initiliazed with the behavior.
@@ -132,11 +132,11 @@ class SpamBlockerBehavior extends ModelBehavior {
 	 * Startup hook from the model.
 	 *
 	 * @access public
-	 * @param object $Model
+	 * @param Model $model
 	 * @param array $settings
 	 * @return void
 	 */
-	public function setup($Model, $settings = array()) {
+	public function setup($model, $settings = array()) {
 		if (!empty($settings) && is_array($settings)) {
 			if (!empty($settings['settings'])) {
 				$this->settings = $settings['settings'] + $this->settings;
@@ -164,17 +164,16 @@ class SpamBlockerBehavior extends ModelBehavior {
 	 * Runs before a save and marks the content as spam or regular comment.
 	 *
 	 * @access public
-	 * @param object $Model
+	 * @param Model $model
 	 * @return mixed
 	 */
-	public function beforeSave($Model) {
-		$data = $Model->data[$Model->name];
+	public function beforeSave($model) {
+		$data = $model->data[$model->name];
 		$points =  0;
 
 		if (!empty($data)) {
-
-			// Check referrer
 			$referer = env('HTTP_REFERER');
+			
 			if (!empty($referer) && strpos($referer, trim(env('HTTP_HOST'), '/')) === false) {
 				$points = $points - 20;
 			}
@@ -206,7 +205,7 @@ class SpamBlockerBehavior extends ModelBehavior {
 
 			// Number of previous comments from email
 			// +1 per approved, -1 per spam
-			$comments = $Model->find('all', array(
+			$comments = $model->find('all', array(
 				'fields' => array('id', $this->columns['status']),
 				'conditions' => array($this->columns['email'] => $data[$this->columns['email']]),
 				'recursive' => -1,
@@ -215,11 +214,11 @@ class SpamBlockerBehavior extends ModelBehavior {
 
 			if (!empty($comments)) {
 				foreach ($comments as $comment) {
-					if ($comment[$Model->alias][$this->columns['status']] == $this->statusCodes['spam']) {
+					if ($comment[$model->alias][$this->columns['status']] == $this->statusCodes['spam']) {
 						--$points;
 					}
 
-					if ($comment[$Model->alias][$this->columns['status']] == $this->statusCodes['approved']) {
+					if ($comment[$model->alias][$this->columns['status']] == $this->statusCodes['approved']) {
 						++$points;
 					}
 				}
@@ -272,7 +271,7 @@ class SpamBlockerBehavior extends ModelBehavior {
 
 			// Body used in previous comment
 			// -1 per exact comment
-			$previousComments = $Model->find('count', array(
+			$previousComments = $model->find('count', array(
 				'conditions' => array($this->columns['content'] => $data[$this->columns['content']]),
 				'recursive' => -1,
 				'contain' => false
@@ -304,14 +303,14 @@ class SpamBlockerBehavior extends ModelBehavior {
 		}
 
 		if ($status == $this->statusCodes['delete']) {
-			$Model->validationErrors[$this->columns['content']] = $this->settings['blocked_msg'];
+			$model->validationErrors[$this->columns['content']] = $this->settings['blocked_msg'];
 			return false;
 
 		} else {
-			$Model->data[$Model->name][$this->columns['status']] = $status;
+			$model->data[$model->name][$this->columns['status']] = $status;
 
 			if ($this->settings['save_points']) {
-				$Model->data[$Model->name][$this->columns['points']] = $points;
+				$model->data[$model->name][$this->columns['points']] = $points;
 			}
 
 			if ($this->settings['send_email']) {
@@ -342,20 +341,20 @@ class SpamBlockerBehavior extends ModelBehavior {
 				$fields[] = $this->columns['slug'];
 			}
 
-			$Model = ClassRegistry::init($this->settings['parent_model']);
-			$entry = $Model->find('first', array(
+			$model = ClassRegistry::init($this->settings['parent_model']);
+			$entry = $model->find('first', array(
 				'fields' => $fields,
 				'conditions' => array('id' => $data[$this->columns['foreign_id']]),
 				'recursive' => -1,
 				'contain' => false
 			));
 
-			$link = str_replace(':id', $entry[$Model->alias]['id'], $this->settings['article_link']);
-			$title = $entry[$Model->alias][$this->columns['title']];
+			$link = str_replace(':id', $entry[$model->alias]['id'], $this->settings['article_link']);
+			$title = $entry[$model->alias][$this->columns['title']];
 			$statusCodes = array_flip($this->statusCodes);
 
 			if ($this->settings['use_slug']) {
-				$link = str_replace(':slug', $entry[$Model->alias][$this->columns['slug']], $this->settings['article_link']);
+				$link = str_replace(':slug', $entry[$model->alias][$this->columns['slug']], $this->settings['article_link']);
 			}
 
 			// Build message
