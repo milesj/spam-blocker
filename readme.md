@@ -1,4 +1,4 @@
-# Spam Blocker v2.0 #
+# Spam Blocker v2.1 #
 
 A CakePHP Behavior that moderates and validates comments to check for spam. Invalid comments will not be inserted into the database.
 
