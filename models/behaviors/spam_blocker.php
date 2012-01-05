@@ -37,7 +37,7 @@ class SpamBlockerBehavior extends ModelBehavior {
 	 * @access public
 	 * @var string
 	 */
-	public $version = '1.8';
+	public $version = '1.9';
 
 	/**
 	 * Settings initiliazed with the behavior.
@@ -49,7 +49,7 @@ class SpamBlockerBehavior extends ModelBehavior {
 		// Model name of the parent article
 		'parent_model' => 'Entry',
 
-		// Link to the parent article (:id will be replaced with article ID)
+		// Link to the parent article (:id and :slug will be replaced with field data)
 		'article_link' => '',
 
 		// To use a slug in the article link, use :slug
@@ -64,10 +64,10 @@ class SpamBlockerBehavior extends ModelBehavior {
 		// Should you receive a notification email for each comment?
 		'send_email' => true,
 
-		// List of blacklisted words within text blocks
+		// List of blacklisted words within the author and content
 		'blacklist_keys' => '',
 
-		// List of blacklisted characters within URLs
+		// List of blacklisted characters within the website and URLs
 		'blacklist_chars' => '',
 
 		// How many points till the comment is deleted (negative)
@@ -109,7 +109,7 @@ class SpamBlockerBehavior extends ModelBehavior {
 	);
 
 	/**
-	 * Disallowed words within the comment body.
+	 * Disallowed words within the author and comment body.
 	 *
 	 * @access public
 	 * @var array
@@ -121,7 +121,7 @@ class SpamBlockerBehavior extends ModelBehavior {
 	);
 
 	/**
-	 * Disallowed words/chars within the url links.
+	 * Disallowed words/chars within URLs.
 	 *
 	 * @access public
 	 * @var array
@@ -238,8 +238,8 @@ class SpamBlockerBehavior extends ModelBehavior {
 			// URL length
 			// -1 if more then 30 chars
 			foreach ($links as $link) {
-				foreach ($this->blacklistCharacters as $word) {
-					if (stripos($link, $word) !== false) {
+				foreach ($this->blacklistCharacters as $character) {
+					if (stripos($link, $character) !== false) {
 						--$points;
 					}
 				}
@@ -251,6 +251,28 @@ class SpamBlockerBehavior extends ModelBehavior {
 				}
 
 				if (strlen($link) >= 30) {
+					--$points;
+				}
+			}
+			
+			// Check the website, author and comment for blacklisted
+			// -1 per instance
+			$website = $data[$this->columns['website']];
+			$content = $data[$this->columns['content']];
+			$name = $data[$this->columns['author']];
+			
+			foreach ($this->blacklistCharacters as $character) {
+				if (stripos($website, $character) !== false) {
+					--$points;
+				}
+			}
+			
+			foreach ($this->blacklistKeywords as $keyword) {
+				if (stripos($name, $keyword) !== false) {
+					--$points;
+				}
+				
+				if (stripos($content, $keyword) !== false) {
 					--$points;
 				}
 			}
